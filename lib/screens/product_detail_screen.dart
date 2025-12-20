@@ -180,50 +180,54 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Tema pink pastel sama seperti di list
-    final Color pastelPinkLight = const Color(0xFFFCE4EC); // background card
-    final Color pastelPinkDark = const Color(0xFFF48FB1);  // AppBar & accent
-    final Color pastelPinkText = const Color(0xFFC2185B);  // teks & icon
+    // Tema pastel pink
+    final Color pastelPinkLight = const Color(0xFFFCE4EC);
+    final Color pastelPinkDark = const Color(0xFFF48FB1);
+    final Color pastelPinkText = const Color(0xFFC2185B);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(product.name),
         backgroundColor: pastelPinkDark,
         actions: [
-          // ✏️ EDIT
           IconButton(
             icon: Icon(Icons.edit, color: Colors.white),
             onPressed: _editProduct,
           ),
-          // 🗑️ DELETE
           IconButton(
             icon: _isDeleting
                 ? const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             )
                 : const Icon(Icons.delete, color: Colors.white),
             onPressed: _isDeleting ? null : _deleteProduct,
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Card(
           color: pastelPinkLight,
-          elevation: 4,
+          elevation: 6,
+          shadowColor: pastelPinkDark.withOpacity(0.3),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _infoTile('Name', product.name, pastelPinkText),
-                _infoTile('Price', '\$${product.price}', pastelPinkText),
-                _infoTile('Description', product.description, pastelPinkText),
+                _infoTile('Name', product.name, pastelPinkText, icon: Icons.label),
+                const Divider(color: Colors.white54),
+                _infoTile('Price', '\$${product.price}', pastelPinkText, icon: Icons.attach_money),
+                const Divider(color: Colors.white54),
+                _infoTile('Description', product.description, pastelPinkText, icon: Icons.description),
               ],
             ),
           ),
@@ -232,9 +236,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  /// ===============================
-  /// ✏️ EDIT PRODUCT
-  /// ===============================
   Future<void> _editProduct() async {
     final updatedProduct = await Navigator.push<Product>(
       context,
@@ -245,7 +246,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (updatedProduct != null) {
       setState(() {
-        product = updatedProduct; // 🔥 refresh detail
+        product = updatedProduct;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -254,9 +255,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  /// ===============================
-  /// 🗑️ DELETE PRODUCT
-  /// ===============================
   Future<void> _deleteProduct() async {
     if (product.id == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -291,7 +289,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       await _apiService.deleteProduct(product.id!);
 
       if (mounted) {
-        Navigator.pop(context, true); // 🔥 trigger list refresh
+        Navigator.pop(context, true);
       }
     } catch (e) {
       setState(() => _isDeleting = false);
@@ -302,27 +300,36 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  /// ===============================
-  /// UI HELPER
-  /// ===============================
-  Widget _infoTile(String label, String value, Color textColor) {
+  Widget _infoTile(String label, String value, Color textColor, {IconData? icon}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: textColor.withOpacity(0.8),
+          if (icon != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0, top: 2),
+              child: Icon(icon, size: 20, color: textColor.withOpacity(0.8)),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(fontSize: 16, color: textColor),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: textColor.withOpacity(0.8),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(fontSize: 16, color: textColor),
+                ),
+              ],
+            ),
           ),
         ],
       ),
