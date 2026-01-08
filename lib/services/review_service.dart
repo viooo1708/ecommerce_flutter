@@ -3,52 +3,80 @@ import 'package:http/http.dart' as http;
 import '../models/review.dart';
 
 class ReviewService {
-  final String baseUrl = "http://192.168.18.65:5002";
+  static const String baseUrl = 'http://192.168.18.65:5002';
 
-  Future<List<Review>> getReviews() async {
-    final response = await http.get(Uri.parse('$baseUrl/reviews'));
+  /// Get all reviews for a product
+  Future<List<Review>> getReviews(int productId) async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/reviews/$productId'),
+    );
 
-    if (response.statusCode == 200) {
-      Iterable list = json.decode(response.body);
-      return list.map((model) => Review.fromJson(model)).toList();
+    if (res.statusCode == 200) {
+      final Map<String, dynamic> jsonData = jsonDecode(res.body);
+      // Cek apakah ada 'data', kalau tidak pakai jsonData langsung
+      final List<dynamic> reviewsJson =
+          (jsonData['data'] as List<dynamic>?) ?? [jsonData];
+      return reviewsJson.map((e) => Review.fromJson(e)).toList();
     } else {
-      throw Exception('Failed to load all reviews');
+      print('GET /reviews failed: ${res.body}');
+      throw Exception('Failed to fetch reviews: ${res.statusCode}');
     }
   }
 
-  Future<List<Review>> getReviewsForProduct(int productId) async {
-    final response =
-        await http.get(Uri.parse('$baseUrl/review/product/$productId'));
+  /// Create new review
+  Future<Review> createReview(
+      int productId,
+      String review,
+      int rating,
+      ) async {
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$baseUrl/review'),
+    );
 
-    if (response.statusCode == 200) {
-      Iterable list = json.decode(response.body);
-      return list.map((model) => Review.fromJson(model)).toList();
-    } else {
-      throw Exception('Failed to load reviews for product $productId');
+    request.fields['product_id'] = productId.toString();
+    request.fields['review_text'] = review;
+    request.fields['rating'] = rating.toString();
+
+    final response = await request.send();
+    final body = await response.stream.bytesToString();
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final json = jsonDecode(body);
+      return Review.fromJson(json['data'] ?? json);
     }
+
+    throw Exception('Failed to create review');
   }
 
-  Future<Review> createReview({
-    required int productId,
-    required String review,
-    required int rating,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/reviews'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(<String, dynamic>{
-        'product_id': productId,
-        'review': review,
+
+
+  /// Update existing review
+  Future<Review> updateReview(int id, String review, int rating) async {
+    final res = await http.put(
+      Uri.parse('$baseUrl/review/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'review_text': review,
         'rating': rating,
       }),
     );
 
-    if (response.statusCode == 201) {
-      return Review.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Failed to create review.');
+    if (res.statusCode == 200) {
+      final jsonData = jsonDecode(res.body);
+      return Review.fromJson(jsonData['data'] ?? jsonData);
+    }
+    throw Exception('Failed to update review');
+  }
+
+  /// Delete review
+  Future<void> deleteReview(int id) async {
+    final res = await http.delete(
+      Uri.parse('$baseUrl/review/$id'),
+    );
+
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw Exception('Failed to delete review');
     }
   }
 }

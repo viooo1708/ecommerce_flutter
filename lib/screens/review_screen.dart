@@ -1,323 +1,172 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../models/product.dart';
 import '../models/review.dart';
-import '../services/review_service.dart';
-import 'product_list_screen.dart';
-import 'cart_screen.dart';
+import '../providers/review_provider.dart';
 
 class ReviewScreen extends StatefulWidget {
-  final int productId;
+  final List<Product> products; // List produk yang bisa direview
 
-  const ReviewScreen({Key? key, required this.productId}) : super(key: key);
+  const ReviewScreen({super.key, required this.products});
 
   @override
-  _ReviewScreenState createState() => _ReviewScreenState();
+  State<ReviewScreen> createState() => _ReviewScreenState();
 }
 
 class _ReviewScreenState extends State<ReviewScreen> {
-  final ReviewService _reviewService = ReviewService();
-  late Future<List<Review>> _reviews;
-  int _currentIndex = 1; // Optional jika ingin bottom navbar
+  Product? _selectedProduct;
+  final TextEditingController _reviewController = TextEditingController();
+  int _rating = 5;
 
   @override
   void initState() {
     super.initState();
-    _loadReviews();
+    if (widget.products.isNotEmpty) {
+      _selectedProduct = widget.products.first;
+      _fetchReviews();
+    }
   }
 
-  void _loadReviews() {
-    setState(() {
-      _reviews = _reviewService.getReviewsForProduct(widget.productId);
-    });
-  }
-
-  void _onTabTapped(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => ProductListScreen()),
-        );
-        break;
-      case 1:
-      // Tetap di Review
-        break;
-      case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => CartScreen()),
-        );
-        break;
+  void _fetchReviews() {
+    if (_selectedProduct != null) {
+      context.read<ReviewProvider>().fetchReviews(_selectedProduct!.id!);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        title: const Text('Reviews', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: Colors.green[700],
-        elevation: 2,
-      ),
-      body: FutureBuilder<List<Review>>(
-        future: _reviews,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(
-              child: Text(
-                'No reviews yet.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
-          }
-
-          final reviews = snapshot.data!;
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            itemCount: reviews.length,
-            itemBuilder: (context, index) {
-              final review = reviews[index];
-
-              return Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => _showReviewDetailDialog(context, review),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Rating badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.green[700],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            review.rating.toString(),
-                            style: const TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Review text + stars
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                review.review,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: List.generate(5, (i) {
-                                  return Icon(
-                                    i < review.rating
-                                        ? Icons.star
-                                        : Icons.star_border,
-                                    color: Colors.amber,
-                                    size: 18,
-                                  );
-                                }),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green[700],
-        child: const Icon(Icons.add),
-        onPressed: () => _showAddReviewDialog(context),
-      ),
-      // BottomNavigationBar jika ingin konsisten seperti ProductListScreen
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.green[700],
-        unselectedItemColor: Colors.grey[500],
-        showUnselectedLabels: true,
-        selectedFontSize: 14,
-        unselectedFontSize: 13,
-        onTap: _onTabTapped,
-        backgroundColor: Colors.white,
-        elevation: 6,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag, size: 26),
-            label: 'Product',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.reviews, size: 26),
-            label: 'Review',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person, size: 26),
-            label: 'User',
-          ),
-        ],
-      ),
-    );
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
   }
 
-  // ======================
-  // ADD REVIEW DIALOG
-  // ======================
-  void _showAddReviewDialog(BuildContext context) {
-    final _formKey = GlobalKey<FormState>();
-    final _reviewController = TextEditingController();
-    int _rating = 3;
+  Future<void> _addReview() async {
+    if (_selectedProduct == null || _reviewController.text.isEmpty) return;
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Add Review"),
-          content: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    try {
+      await context.read<ReviewProvider>().addReview(
+        productId: _selectedProduct!.id!,
+        review: _reviewController.text,
+        rating: _rating,
+      );
+
+      _reviewController.clear();
+      setState(() => _rating = 5);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review added')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<ReviewProvider>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Product Reviews'),
+        backgroundColor: Colors.pinkAccent,
+      ),
+      body: Column(
+        children: [
+          // Dropdown pilih produk
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: DropdownButton<Product>(
+              value: _selectedProduct,
+              isExpanded: true,
+              hint: const Text('Select Product'),
+              items: widget.products
+                  .map((p) => DropdownMenuItem(
+                value: p,
+                child: Text(p.name),
+              ))
+                  .toList(),
+              onChanged: (p) {
+                setState(() => _selectedProduct = p);
+                _fetchReviews();
+              },
+            ),
+          ),
+
+          // List review
+          Expanded(
+            child: provider.loading
+                ? const Center(child: CircularProgressIndicator())
+                : provider.error != null
+                ? Center(
+              child: Text(
+                'Error: ${provider.error}',
+                style: const TextStyle(color: Colors.red),
+              ),
+            )
+                : provider.reviews.isEmpty
+                ? const Center(
+              child: Text(
+                'No reviews found',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: provider.reviews.length,
+              itemBuilder: (_, i) {
+                final r = provider.reviews[i];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  elevation: 2,
+                  child: ListTile(
+                    title: Text(r.review),
+                    subtitle: Row(
+                      children: List.generate(
+                        r.rating,
+                            (index) => const Icon(Icons.star, color: Colors.amber, size: 16),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Input review
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                TextFormField(
-                  controller: _reviewController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Review',
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                Expanded(
+                  child: TextField(
+                    controller: _reviewController,
+                    decoration: const InputDecoration(
+                      labelText: 'Add a review',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                  validator: (v) =>
-                  v == null || v.isEmpty ? "Please enter review" : null,
                 ),
-                const SizedBox(height: 20),
-                DropdownButtonFormField<int>(
+                const SizedBox(width: 8),
+                DropdownButton<int>(
                   value: _rating,
-                  decoration: InputDecoration(
-                    labelText: "Rating",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  items: [1, 2, 3, 4, 5].map((e) {
-                    return DropdownMenuItem(
-                      value: e,
-                      child: Text("$e Star(s)"),
-                    );
-                  }).toList(),
-                  onChanged: (v) => _rating = v!,
+                  items: [1, 2, 3, 4, 5]
+                      .map((e) => DropdownMenuItem(value: e, child: Text('$e')))
+                      .toList(),
+                  onChanged: (v) => setState(() => _rating = v ?? 5),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.pinkAccent),
+                  onPressed: _addReview,
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () => Navigator.pop(context),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text("Submit"),
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  _reviewService
-                      .createReview(
-                    productId: widget.productId,
-                    review: _reviewController.text,
-                    rating: _rating,
-                  )
-                      .then((_) {
-                    Navigator.pop(context);
-                    _loadReviews();
-                  });
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // ======================
-  // DETAIL DIALOG
-  // ======================
-  void _showReviewDetailDialog(BuildContext context, Review review) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text("Review Details"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                review.review,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: List.generate(5, (i) {
-                  return Icon(
-                    i < review.rating ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                  );
-                }),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Close"),
-              onPressed: () => Navigator.pop(context),
-            )
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 }

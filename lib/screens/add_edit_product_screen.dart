@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/product.dart';
-import '../services/api_service.dart';
+import '../providers/product_provider.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
-
   const AddEditProductScreen({super.key, this.product});
 
   @override
-  _AddEditProductScreenState createState() => _AddEditProductScreenState();
+  State<AddEditProductScreen> createState() => _AddEditProductScreenState();
 }
 
 class _AddEditProductScreenState extends State<AddEditProductScreen> {
@@ -16,7 +16,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final ApiService _apiService = ApiService();
   bool _isSaving = false;
 
   @override
@@ -39,116 +38,94 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Tema pink pastel sama seperti di List & Detail
-    final Color pastelPinkLight = const Color(0xFFFCE4EC);
     final Color pastelPinkDark = const Color(0xFFF48FB1);
+    final provider = context.read<ProductProvider>();
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
         backgroundColor: pastelPinkDark,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Card(
-            color: pastelPinkLight,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Name'),
-                      validator: (value) =>
-                      value!.isEmpty ? 'Please enter name' : null,
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Name
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+
+              // Price
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: 'Price'),
+                keyboardType: TextInputType.number,
+                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+              ),
+
+              // Description
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 3,
+              ),
+
+              const SizedBox(height: 20),
+
+              // Save Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : () => _saveProduct(provider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pastelPinkDark,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(labelText: 'Price'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) =>
-                      value!.isEmpty ? 'Please enter price' : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(labelText: 'Description'),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSaving ? null : _saveProduct,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: pastelPinkDark,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                            : const Text(
-                          'Save',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                  child: _isSaving
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Save', style: TextStyle(fontSize: 16)),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Future<void> _saveProduct() async {
+  Future<void> _saveProduct(ProductProvider provider) async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
-    // Hapus titik / koma dari input harga sebelum parsing
-    String priceText = _priceController.text.replaceAll('.', '').replaceAll(',', '');
-    final double price = double.tryParse(priceText) ?? 0.0;
-
-    final productToSend = Product(
+    final product = Product(
       id: widget.product?.id,
-      name: _nameController.text,
-      price: price,
-      description: _descriptionController.text,
+      name: _nameController.text.trim(),
+      price: double.tryParse(_priceController.text) ?? 0,
+      description: _descriptionController.text.trim(),
     );
 
     try {
-      Product savedProduct;
-
       if (widget.product == null) {
-        savedProduct = await _apiService.createProduct(productToSend);
+        // Tambah produk baru
+        await provider.addProduct(product);
       } else {
-        savedProduct =
-        await _apiService.updateProduct(productToSend.id!, productToSend);
+        // Update produk
+        await provider.updateProduct(widget.product!.id!, product);
       }
 
-      if (mounted) Navigator.pop(context, savedProduct);
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save product')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
