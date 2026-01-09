@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/review.dart';
 
 class ReviewService {
-  static const String baseUrl = 'http://192.168.18.65:5002';
+  static const String baseUrl = 'http://10.0.2.2:5002';
 
   /// Get all reviews for a product
   Future<List<Review>> getReviews(int productId) async {

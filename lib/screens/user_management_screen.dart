@@ -38,16 +38,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ? const Center(child: CircularProgressIndicator())
           : provider.error != null
           ? Center(
-          child: Text(
-            'Error: ${provider.error}',
-            style: const TextStyle(color: Colors.red),
-          ))
+        child: Text(
+          'Error: ${provider.error}',
+          style: const TextStyle(color: Colors.red),
+        ),
+      )
           : provider.users.isEmpty
           ? const Center(
-          child: Text(
-            'No users found',
-            style: TextStyle(color: Colors.grey),
-          ))
+        child: Text(
+          'No users found',
+          style: TextStyle(color: Colors.grey),
+        ),
+      )
           : RefreshIndicator(
         onRefresh: provider.fetchUsers,
         child: ListView.builder(
@@ -79,16 +81,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon:
-                      const Icon(Icons.edit, color: Colors.blue),
+                      icon: const Icon(Icons.edit,
+                          color: Colors.blue),
                       onPressed: () =>
                           _showUserDialog(context, user: user),
                     ),
                     IconButton(
-                      icon:
-                      const Icon(Icons.delete, color: Colors.red),
+                      icon: const Icon(Icons.delete,
+                          color: Colors.red),
                       onPressed: () =>
-                          _deleteUser(context, user.id),
+                          _confirmDelete(context, user),
                     ),
                   ],
                 ),
@@ -123,8 +125,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       builder: (_) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           backgroundColor: const Color(0xFFFDE8F0),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
           title: Text(user == null ? 'Add User' : 'Edit User'),
           content: Form(
             key: _formKey,
@@ -183,9 +185,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                   if (success) {
                     Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                            user == null ? 'User added' : 'User updated')));
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(provider.error ?? 'Failed')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(provider.error ?? 'Failed')));
                   }
                 }
               },
@@ -198,21 +203,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   }
 
   // =====================
-  // Hapus User
+  // Konfirmasi & Hapus User
   // =====================
-  void _deleteUser(BuildContext context, int id) async {
+  void _confirmDelete(BuildContext context, User user) async {
     final provider = context.read<UserProvider>();
 
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: const Text('Are you sure you want to delete this user?'),
+        title: Row(
+          children: const [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Delete User'),
+          ],
+        ),
+        content: Text('Are you sure you want to delete ${user.name}?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel')),
           ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Delete')),
         ],
@@ -220,8 +232,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
 
     if (confirm == true) {
-      final success = await provider.deleteUser(id);
-      if (!success) {
+      final success = await provider.deleteUser(user.id);
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User deleted successfully')));
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(provider.error ?? 'Failed to delete')));
       }

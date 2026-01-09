@@ -38,13 +38,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Color pastelPinkDark = const Color(0xFFF48FB1);
+    final Color appBarColor = Colors.pinkAccent;       // sama dengan ProductDetailScreen
+    final Color actionColor = const Color(0xFFF48FB1); // tombol tetap soft pink
     final provider = context.read<ProductProvider>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFDE8F0), // soft pink lembut seperti list/detail
       appBar: AppBar(
         title: Text(widget.product == null ? 'Add Product' : 'Edit Product'),
-        backgroundColor: pastelPinkDark,
+        backgroundColor: appBarColor,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -55,25 +57,41 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               // Name
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(),
+                ),
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 12),
 
               // Price
               TextFormField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price'),
+                decoration: const InputDecoration(
+                  labelText: 'Price',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (v) => v == null || v.isEmpty ? 'Required' : null,
               ),
+              const SizedBox(height: 12),
 
               // Description
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(),
+                ),
                 maxLines: 3,
               ),
-
               const SizedBox(height: 20),
 
               // Save Button
@@ -83,7 +101,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : () => _saveProduct(provider),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: pastelPinkDark,
+                    backgroundColor: actionColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

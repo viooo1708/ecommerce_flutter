@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 
 class UserService {
-  static const String baseUrl = 'http://192.168.18.65:4000/users';
+  // Ganti dengan IP atau localhost sesuai docker / networkmu
+  static const String baseUrl = 'http://10.0.2.2:4000/users';
 
   /// ===============================
   /// GET: Ambil semua user
@@ -49,7 +50,13 @@ class UserService {
 
     if (res.statusCode == 200) {
       final jsonData = jsonDecode(res.body);
-      return User.fromJson(jsonData);
+
+      // API PUT mengembalikan: { success, message, data }
+      if (jsonData['data'] != null) {
+        return User.fromJson(jsonData['data']);
+      } else {
+        throw Exception('Invalid response from server');
+      }
     } else {
       throw Exception('Failed to update user: ${res.statusCode}');
     }

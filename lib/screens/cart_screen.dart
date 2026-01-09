@@ -8,11 +8,14 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
+    final Color primaryColor = const Color(0xFFF48FB1);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFDE8F0), // soft pink selaras list/detail
       appBar: AppBar(
         title: const Text('Cart'),
-        backgroundColor: const Color(0xFFF48FB1),
+        backgroundColor: Colors.pinkAccent, // selaras AppBar list/detail
+        elevation: 0,
       ),
       body: cartProvider.loading
           ? const Center(child: CircularProgressIndicator())
@@ -27,25 +30,31 @@ class CartScreen extends StatelessWidget {
         children: [
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               itemCount: cartProvider.items.length,
               itemBuilder: (_, i) {
                 final item = cartProvider.items[i];
                 return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  margin: const EdgeInsets.symmetric(vertical: 6),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 2,
+                      borderRadius: BorderRadius.circular(16)),
+                  elevation: 3, // selaras dengan list/detail
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     title: Text(
                       item.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     subtitle: Text(
-                        'Quantity: ${item.quantity}  •  Price: \$${item.price.toStringAsFixed(2)}'),
+                      'Quantity: ${item.quantity}  •  Price: \$${item.price.toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 14),
+                    ),
                     trailing: Text(
                       '\$${(item.price * item.quantity).toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                   ),
                 );
@@ -70,13 +79,13 @@ class CartScreen extends StatelessWidget {
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF48FB1),
+                    backgroundColor: primaryColor,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Checkout'),
+                  child: const Text('Checkout', style: TextStyle(fontSize: 16)),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Checkout pressed')),

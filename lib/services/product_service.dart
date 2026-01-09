@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/product.dart';
 
 class ProductService {
-  static const String baseUrl = 'http://192.168.18.65:3000';
+  static const String baseUrl = 'http://10.0.2.2:10001';
 
   /// ===============================
   /// GET: Ambil semua produk

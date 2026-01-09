@@ -34,7 +34,7 @@ import '../models/product.dart';
 
 class ApiService {
   // static const String baseUrl = 'http://localhost:3000';
-  static const String baseUrl = 'http://192.168.18.65:3000';
+  static const String baseUrl = 'http://10.0.2.2:10001';
 
   Future<List<Product>> getProducts() async {
     final response = await http.get(Uri.parse('$baseUrl/products'));

@@ -29,6 +29,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final provider = context.watch<ProductProvider>();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFDE8F0),
       body: provider.loading
           ? const Center(child: CircularProgressIndicator())
           : provider.error != null
